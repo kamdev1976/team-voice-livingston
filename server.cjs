@@ -1,21 +1,81 @@
 // server.cjs
-const fs = require('fs');
 const http = require('http');
+const mongoose = require('mongoose');
 
 const PORT = process.env.PORT || 8000;
-const DB_FILE = './db.json';
+const MONGODB_URI = process.env.MONGODB_URI;
 
-const getDbData = () => {
+// Default static September data to seed into MongoDB if empty
+const INITIAL_SEPTEMBER_DATA = {
+  monthKey: 'Sep-26',
+  carryForward: 1433,
+  collections: [
+    { id: 1, memberName: 'Kamdev Sahoo', amount: 1500, receivedBy: 'Sahoo' },
+    { id: 2, memberName: 'Himanshu Gaur', amount: 1500, receivedBy: 'Sahoo' },
+    { id: 3, memberName: 'Mahesh', amount: 1000, receivedBy: 'Sahoo' },
+    { id: 4, memberName: 'Ankit Gupta', amount: 1500, receivedBy: 'Sahoo' },
+    { id: 5, memberName: 'Kundan', amount: 1500, receivedBy: 'Sahoo' },
+    { id: 6, memberName: 'Abhishek Sen', amount: 1500, receivedBy: 'Sahoo' },
+    { id: 7, memberName: 'Mohanty', amount: 1500, receivedBy: 'Sahoo' },
+    { id: 8, memberName: 'Ambuj', amount: 1500, receivedBy: 'Sahoo' },
+    { id: 9, memberName: 'Anup', amount: 1500, receivedBy: 'Sahoo' },
+    { id: 10, memberName: 'Amod Giri', amount: 1500, receivedBy: 'Sahoo' },
+    { id: 11, memberName: 'Vivek', amount: 1500, receivedBy: 'Sahoo' },
+    { id: 12, memberName: 'Madan', amount: 1500, receivedBy: '' }
+  ],
+  expenses: [
+    { id: 101, description: '1 Court charge', amount: 9000 },
+    { id: 102, description: '2nd court charge', amount: 8000 }
+  ]
+};
+
+// MongoDB Schemas & Models
+const CollectionSchema = new mongoose.Schema({
+  id: Number,
+  memberName: String,
+  amount: Number,
+  receivedBy: String
+});
+
+const ExpenseSchema = new mongoose.Schema({
+  id: Number,
+  description: String,
+  amount: Number
+});
+
+const LedgerSchema = new mongoose.Schema({
+  monthKey: { type: String, required: true, unique: true },
+  carryForward: { type: Number, default: 0 },
+  collections: [CollectionSchema],
+  expenses: [ExpenseSchema]
+}, { timestamps: true });
+
+const Ledger = mongoose.model('Ledger', LedgerSchema);
+
+// Auto-seed baseline September data if DB is completely empty
+const seedDefaultData = async () => {
   try {
-    return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    const existingSep = await Ledger.findOne({ monthKey: 'Sep-26' });
+    if (!existingSep) {
+      await Ledger.create(INITIAL_SEPTEMBER_DATA);
+      console.log('Sep-26 initial baseline data seeded to MongoDB successfully');
+    }
   } catch (err) {
-    return { medicines: [], invoices: [], monthlyLedgers: [] };
+    console.error('Error seeding default data:', err);
   }
 };
 
-const saveDbData = (data) => {
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-};
+// Connect to MongoDB Atlas
+if (MONGODB_URI) {
+  mongoose.connect(MONGODB_URI)
+    .then(() => {
+      console.log('MongoDB Atlas Connected Successfully');
+      seedDefaultData();
+    })
+    .catch(err => console.error('MongoDB Connection Error:', err));
+} else {
+  console.warn('Warning: MONGODB_URI environment variable is missing!');
+}
 
 // Helper function to generate valid dynamic password (ddmmyy + lowercase 3-letter weekday)
 const getExpectedPassword = () => {
@@ -25,10 +85,10 @@ const getExpectedPassword = () => {
   const year = String(now.getFullYear()).slice(-2);
   const weekday = now.toLocaleString('en-US', { weekday: 'short' }).toLowerCase();
   
-  return `${day}${month}${year}${weekday}`; // e.g., "280926mon"
+  return `${day}${month}${year}${weekday}`;
 };
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
@@ -40,43 +100,45 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const db = getDbData();
-
   // GET / (Health Check)
   if (req.url === '/' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'Pharmacy & Club Ledger Backend API is running' }));
   }
 
-  // GET /medicines
-  else if (req.url === '/medicines' && req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(db.medicines || []));
-  } 
-  
-  // GET /invoices
-  else if (req.url === '/invoices' && req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(db.invoices || []));
-  } 
-
-  // GET /clubledger OR /ledger-months
+  // GET /ledger-months OR /clubledger
   else if ((req.url === '/clubledger' || req.url === '/ledger-months') && req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    if (req.url === '/ledger-months') {
-      const months = (db.monthlyLedgers || []).map(l => l.monthKey);
-      res.end(JSON.stringify(months));
-    } else {
-      res.end(JSON.stringify(db.monthlyLedgers || []));
+    try {
+      if (req.url === '/ledger-months') {
+        const ledgers = await Ledger.find({}, 'monthKey').sort({ createdAt: 1 });
+        const monthKeys = ledgers.map(l => l.monthKey);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(monthKeys.length > 0 ? monthKeys : ['Sep-26']));
+      } else {
+        const ledgers = await Ledger.find({});
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(ledgers));
+      }
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Database error fetching months' }));
     }
   }
 
   // GET /clubledger/:monthKey OR /ledger/:monthKey
   else if ((req.url.startsWith('/clubledger/') || req.url.startsWith('/ledger/')) && req.method === 'GET') {
     const monthKey = req.url.split('/')[2];
-    const ledger = (db.monthlyLedgers || []).find(l => l.monthKey === monthKey);
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(ledger || { monthKey, carryForward: 0, collections: [], expenses: [] }));
+    try {
+      let ledger = await Ledger.findOne({ monthKey });
+      if (!ledger) {
+        ledger = { monthKey, carryForward: 0, collections: [], expenses: [] };
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(ledger));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Database error fetching ledger' }));
+    }
   }
 
   // PROTECTED: POST/PUT /clubledger OR /ledger
@@ -92,20 +154,27 @@ const server = http.createServer((req, res) => {
 
     let body = '';
     req.on('data', chunk => body += chunk);
-    req.on('end', () => {
-      const payload = JSON.parse(body);
-      if (!db.monthlyLedgers) db.monthlyLedgers = [];
-      
-      const idx = db.monthlyLedgers.findIndex(l => l.monthKey === payload.monthKey);
-      if (idx >= 0) {
-        db.monthlyLedgers[idx] = payload;
-      } else {
-        db.monthlyLedgers.push(payload);
-      }
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body);
+        
+        // Upsert into MongoDB (Update if exists, insert if new)
+        const updatedLedger = await Ledger.findOneAndUpdate(
+          { monthKey: payload.monthKey },
+          { 
+            carryForward: payload.carryForward, 
+            collections: payload.collections, 
+            expenses: payload.expenses 
+          },
+          { new: true, upsert: true }
+        );
 
-      saveDbData(db);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(payload));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(updatedLedger));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Failed to save ledger to MongoDB' }));
+      }
     });
   }
 
