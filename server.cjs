@@ -29,7 +29,9 @@ const INITIAL_SEPTEMBER_DATA = {
   ]
 };
 
-// MongoDB Schemas & Models
+// --- MongoDB Schemas & Models ---
+
+// 1. Club Ledger Schemas
 const CollectionSchema = new mongoose.Schema({
   id: Number,
   memberName: String,
@@ -51,6 +53,17 @@ const LedgerSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const Ledger = mongoose.model('Ledger', LedgerSchema);
+
+// 2. Election Voting Schema (Enforces single vote per Flat, Mobile, or Aadhaar)
+const VoteSchema = new mongoose.Schema({
+  flatNo: { type: String, required: true, unique: true },
+  mobileNo: { type: String, required: true, unique: true },
+  aadhaarNo: { type: String, required: true, unique: true },
+  selectedCandidates: [{ type: String, required: true }],
+  votedAt: { type: Date, default: Date.now }
+});
+
+const Vote = mongoose.model('Vote', VoteSchema);
 
 // Auto-seed baseline September data if DB is completely empty
 const seedDefaultData = async () => {
@@ -88,13 +101,14 @@ const getExpectedPassword = () => {
   return `${day}${month}${year}${weekday}`;
 };
 
+// --- HTTP Server Definition ---
 const server = http.createServer(async (req, res) => {
-  // Enforce CORS headers on ALL responses immediately
+  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-password, Authorization');
 
-  // Handle browser preflight OPTIONS requests
+  // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
@@ -105,8 +119,10 @@ const server = http.createServer(async (req, res) => {
     // GET / (Health Check)
     if (req.url === '/' && req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'Pharmacy & Club Ledger Backend API is running' }));
+      res.end(JSON.stringify({ status: 'Supertech Livingston API Server is running' }));
     }
+
+    // --- CLUB LEDGER ENDPOINTS ---
 
     // GET /ledger-months OR /clubledger
     else if ((req.url === '/clubledger' || req.url === '/ledger-months') && req.method === 'GET') {
@@ -150,7 +166,6 @@ const server = http.createServer(async (req, res) => {
         try {
           const payload = JSON.parse(body);
           
-          // Upsert into MongoDB (Update if exists, insert if new)
           const updatedLedger = await Ledger.findOneAndUpdate(
             { monthKey: payload.monthKey },
             { 
@@ -170,7 +185,74 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // Fallback handlers for secondary POC endpoints
+    // --- ELECTION VOTING ENDPOINTS ---
+
+    // POST /api/votes - Submit Vote
+    else if (req.url === '/api/votes' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', async () => {
+        try {
+          const { flatNo, mobileNo, aadhaarNo, selectedCandidates } = JSON.parse(body);
+
+          if (!flatNo || !mobileNo || !aadhaarNo || !selectedCandidates?.length) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Flat No, Mobile No, Aadhaar No, and Candidate selection are required.' }));
+            return;
+          }
+
+          // Check if Flat, Mobile, or Aadhaar has already voted
+          const existingVote = await Vote.findOne({
+            \$or: [{ flatNo }, { mobileNo }, { aadhaarNo }]
+          });
+
+          if (existingVote) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'A vote has already been submitted for this Flat, Mobile, or Aadhaar number.' }));
+            return;
+          }
+
+          const newVote = await Vote.create({ flatNo, mobileNo, aadhaarNo, selectedCandidates });
+          res.writeHead(201, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ message: 'Vote submitted successfully!', voteId: newVote._id }));
+        } catch (err) {
+          if (err.code === 11000) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Duplicate vote detected. Flat, Mobile, or Aadhaar already recorded.' }));
+            return;
+          }
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Server error processing vote.' }));
+        }
+      });
+    }
+
+    // GET /api/votes/results - Election Results Summary (Protected by Admin Password)
+    else if (req.url === '/api/votes/results' && req.method === 'GET') {
+      const providedPassword = req.headers['x-admin-password'];
+      const expectedPassword = getExpectedPassword();
+
+      if (!providedPassword || providedPassword.trim().toLowerCase() !== expectedPassword) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized: Admin password required to view election results.' }));
+        return;
+      }
+
+      const votes = await Vote.find({});
+      const tally = {};
+
+      votes.forEach(vote => {
+        vote.selectedCandidates.forEach(candidate => {
+          tally[candidate] = (tally[candidate] || 0) + 1;
+        });
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ totalVotes: votes.length, tally, votes }));
+    }
+
+    // --- FALLBACK ENDPOINTS ---
+
     else if (req.url === '/invoices' || req.url === '/medicines') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify([]));
