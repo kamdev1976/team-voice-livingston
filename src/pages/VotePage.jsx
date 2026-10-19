@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 
 const CANDIDATES = [
   { id: 'c1', name: 'Vikash Kumar', title: 'President Candidate', tower: 'Tower 4' },
@@ -7,6 +8,7 @@ const CANDIDATES = [
 ];
 
 export default function VotePage() {
+  const navigate = useNavigate(); // 2. Initialize navigate hook
   const [formData, setFormData] = useState({ flatNo: '', mobileNo: '', aadhaarNo: '' });
   const [selectedCandidate, setSelectedCandidate] = useState('');
   const [status, setStatus] = useState({ loading: false, message: '', error: '' });
@@ -33,9 +35,15 @@ export default function VotePage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to submit vote');
 
-      setStatus({ loading: false, message: 'Your vote has been recorded successfully!', error: '' });
+      // 3. Set success message and redirect after 1.5 seconds
+      setStatus({ loading: false, message: 'Your vote has been recorded! Redirecting to results...', error: '' });
       setFormData({ flatNo: '', mobileNo: '', aadhaarNo: '' });
       setSelectedCandidate('');
+
+      setTimeout(() => {
+        navigate('/vote-results'); // Redirects to the Results Page
+      }, 1500);
+
     } catch (err) {
       setStatus({ loading: false, message: '', error: err.message });
     }
@@ -76,7 +84,7 @@ export default function VotePage() {
         </div>
 
         <div>
-          <label className="block text-sm text-slate-300 mb-1">Aadhaar Card Number (Last 4 digits or Full)</label>
+          <label className="block text-sm text-slate-300 mb-1">Aadhaar Card Number</label>
           <input
             type="text"
             required

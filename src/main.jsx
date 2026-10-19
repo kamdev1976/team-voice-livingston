@@ -9,14 +9,14 @@ import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AuthProvider>
-      <EmployeeProvider>
-        <BillingProvider>
-          <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <EmployeeProvider>
+          <BillingProvider>
             <App />
-          </BrowserRouter>
-        </BillingProvider>
-      </EmployeeProvider>
-    </AuthProvider>
+          </BillingProvider>
+        </EmployeeProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );
