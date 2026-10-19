@@ -3,9 +3,10 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
-// 1. Add this import:
 import { EmployeeProvider } from './context/EmployeeContext';
 import { BillingProvider } from './context/BillingContext';
+// 👇 Added stylesheet import so Tailwind/CSS styles bundle properly in production
+import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
