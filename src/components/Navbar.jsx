@@ -12,7 +12,7 @@ export default function Navbar() {
           <span>Team Voice of Livingston</span>
         </Link>
 
-        {/* Center Nav Links */}
+        {/* Center Navigation Links */}
         <nav className="hidden md:flex space-x-6 text-sm font-medium text-slate-300">
           <Link to="/" className="hover:text-blue-400 transition">Home</Link>
           <Link to="/about" className="hover:text-blue-400 transition">About Us</Link>
@@ -21,28 +21,24 @@ export default function Navbar() {
           <Link to="/clubledger" className="hover:text-blue-400 transition">Club Ledger</Link>
         </nav>
 
-        {/* Action Buttons (Right-aligned) */}
+        {/* Action Buttons */}
         <div className="flex items-center space-x-3">
           
-          {/* VOTING BUTTON (Highlighted Call-To-Action) */}
+          {/* Vote Now Button */}
           <Link
             to="/vote"
-            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-lg shadow-md hover:shadow-blue-500/20 transition duration-200 flex items-center space-x-1"
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-lg shadow-md transition"
           >
-            <span>🗳️</span>
-            <span>Vote Now</span>
+            🗳️ Vote Now
           </Link>
 
-          {/* Secondary Action */}
-          <a
-            href="https://chat.whatsapp.com/your-group-invite"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex items-center space-x-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition"
+          {/* Results Link Button */}
+          <Link
+            to="/vote-results"
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs rounded-lg border border-slate-700 transition"
           >
-            <span>💬</span>
-            <span>Join WhatsApp</span>
-          </a>
+            📊 View Results
+          </Link>
 
         </div>
 
