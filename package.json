@@ -25,11 +25,15 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
+    "autoprefixer": "^10.6.1",
     "json-server": "^0.17.4",
     "oxlint": "^1.79.0",
+    "postcss": "^8.5.31",
+    "tailwindcss": "^4.3.3",
     "vite": "^8.2.2"
   }
 }
