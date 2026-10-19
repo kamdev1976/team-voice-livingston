@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   ShieldCheck, 
-  FileText, 
   Users, 
   ChevronDown, 
-  Vote, 
   Calendar, 
-  MessageSquare, 
   CheckCircle2, 
-  AlertCircle 
+  AlertCircle,
+  Vote,
+  BarChart3
 } from 'lucide-react';
 
-export default function Homepage() {
+export default function Dashboard() {
   const [openAccordion, setOpenAccordion] = useState(null);
 
   const toggleAccordion = (index) => {
@@ -47,35 +47,10 @@ export default function Homepage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
-      {/* Header / Navbar */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Vote className="h-7 w-7 text-blue-600" />
-            <span className="font-bold text-lg sm:text-xl text-slate-900 tracking-tight">
-              Team Voice of Livingston
-            </span>
-          </div>
-          <nav className="hidden md:flex space-x-8 text-sm font-medium text-slate-600">
-            <a href="#about" className="hover:text-blue-600 transition">About Us</a>
-            <a href="#candidates" className="hover:text-blue-600 transition">Our Panel</a>
-            <a href="#manifesto" className="hover:text-blue-600 transition">Manifesto</a>
-            <a href="#updates" className="hover:text-blue-600 transition">Election Updates</a>
-          </nav>
-          <a
-            href="https://chat.whatsapp.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm"
-          >
-            <MessageSquare className="h-4 w-4" />
-            <span>Join WhatsApp</span>
-          </a>
-        </div>
-      </header>
+      {/* 🛑 NO HEADER TAG HERE — App.jsx handles the global Navbar */}
 
       {/* Hero Section */}
-      <section className="relative bg-slate-900 text-white py-20 lg:py-28 px-4 overflow-hidden">
+      <section className="relative bg-slate-900 text-white py-16 lg:py-24 px-4 overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <span className="inline-block bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider mb-4">
@@ -87,19 +62,23 @@ export default function Homepage() {
           <p className="text-lg sm:text-xl text-slate-300 mb-8 max-w-2xl mx-auto font-light">
             Fresh Vision • Full Financial Accountability • Community First
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="#manifesto"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 rounded-lg font-semibold shadow-lg hover:shadow-blue-500/25 transition"
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Link
+              to="/vote"
+              className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3.5 rounded-lg font-semibold shadow-lg hover:shadow-blue-500/25 transition"
             >
-              Read Our Manifesto
-            </a>
-            <a
-              href="#candidates"
-              className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-6 py-3.5 rounded-lg font-semibold transition"
+              <Vote className="w-5 h-5" />
+              <span>Cast Your Vote</span>
+            </Link>
+            <Link
+              to="/vote-results"
+              className="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-6 py-3.5 rounded-lg font-semibold transition"
             >
-              Meet Our Panel
-            </a>
+              <BarChart3 className="w-5 h-5 text-indigo-400" />
+              <span>View Election Results</span>
+            </Link>
           </div>
         </div>
       </section>
@@ -212,8 +191,8 @@ export default function Homepage() {
               </div>
             </div>
             <div className="border-t border-slate-700 pt-4 flex flex-col sm:flex-row justify-between text-sm text-slate-400">
-              <span><strong>Status:</strong> Awaiting Official Election Committee Announcement</span>
-              <span><strong>Location:</strong> Society Club House</span>
+              <span><strong>Status:</strong> Active Online Digital Polling</span>
+              <span><strong>Location:</strong> Digital Voting Portal & Society Club House</span>
             </div>
           </div>
         </div>
