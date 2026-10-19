@@ -89,26 +89,27 @@ const getExpectedPassword = () => {
 };
 
 const server = http.createServer(async (req, res) => {
-  // CORS Headers
+  // Enforce CORS headers on ALL responses immediately
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-password');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-password, Authorization');
 
+  // Handle browser preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
     return;
   }
 
-  // GET / (Health Check)
-  if (req.url === '/' && req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'Pharmacy & Club Ledger Backend API is running' }));
-  }
+  try {
+    // GET / (Health Check)
+    if (req.url === '/' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'Pharmacy & Club Ledger Backend API is running' }));
+    }
 
-  // GET /ledger-months OR /clubledger
-  else if ((req.url === '/clubledger' || req.url === '/ledger-months') && req.method === 'GET') {
-    try {
+    // GET /ledger-months OR /clubledger
+    else if ((req.url === '/clubledger' || req.url === '/ledger-months') && req.method === 'GET') {
       if (req.url === '/ledger-months') {
         const ledgers = await Ledger.find({}, 'monthKey').sort({ createdAt: 1 });
         const monthKeys = ledgers.map(l => l.monthKey);
@@ -119,69 +120,70 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(ledgers));
       }
-    } catch (err) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Database error fetching months' }));
     }
-  }
 
-  // GET /clubledger/:monthKey OR /ledger/:monthKey
-  else if ((req.url.startsWith('/clubledger/') || req.url.startsWith('/ledger/')) && req.method === 'GET') {
-    const monthKey = req.url.split('/')[2];
-    try {
+    // GET /clubledger/:monthKey OR /ledger/:monthKey
+    else if ((req.url.startsWith('/clubledger/') || req.url.startsWith('/ledger/')) && req.method === 'GET') {
+      const monthKey = req.url.split('/')[2];
       let ledger = await Ledger.findOne({ monthKey });
       if (!ledger) {
         ledger = { monthKey, carryForward: 0, collections: [], expenses: [] };
       }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(ledger));
-    } catch (err) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Database error fetching ledger' }));
-    }
-  }
-
-  // PROTECTED: POST/PUT /clubledger OR /ledger
-  else if ((req.url === '/clubledger' || req.url === '/ledger') && (req.method === 'POST' || req.method === 'PUT')) {
-    const providedPassword = req.headers['x-admin-password'];
-    const expectedPassword = getExpectedPassword();
-
-    if (!providedPassword || providedPassword.trim().toLowerCase() !== expectedPassword) {
-      res.writeHead(401, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unauthorized: Invalid authentication password.' }));
-      return;
     }
 
-    let body = '';
-    req.on('data', chunk => body += chunk);
-    req.on('end', async () => {
-      try {
-        const payload = JSON.parse(body);
-        
-        // Upsert into MongoDB (Update if exists, insert if new)
-        const updatedLedger = await Ledger.findOneAndUpdate(
-          { monthKey: payload.monthKey },
-          { 
-            carryForward: payload.carryForward, 
-            collections: payload.collections, 
-            expenses: payload.expenses 
-          },
-          { new: true, upsert: true }
-        );
+    // PROTECTED: POST/PUT /clubledger OR /ledger
+    else if ((req.url === '/clubledger' || req.url === '/ledger') && (req.method === 'POST' || req.method === 'PUT')) {
+      const providedPassword = req.headers['x-admin-password'];
+      const expectedPassword = getExpectedPassword();
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(updatedLedger));
-      } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Failed to save ledger to MongoDB' }));
+      if (!providedPassword || providedPassword.trim().toLowerCase() !== expectedPassword) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized: Invalid authentication password.' }));
+        return;
       }
-    });
-  }
 
-  // 404 Fallback
-  else {
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Endpoint not found' }));
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', async () => {
+        try {
+          const payload = JSON.parse(body);
+          
+          // Upsert into MongoDB (Update if exists, insert if new)
+          const updatedLedger = await Ledger.findOneAndUpdate(
+            { monthKey: payload.monthKey },
+            { 
+              carryForward: payload.carryForward, 
+              collections: payload.collections, 
+              expenses: payload.expenses 
+            },
+            { new: true, upsert: true }
+          );
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(updatedLedger));
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Failed to save ledger to MongoDB' }));
+        }
+      });
+    }
+
+    // Fallback handlers for secondary POC endpoints
+    else if (req.url === '/invoices' || req.url === '/medicines') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify([]));
+    }
+
+    // 404 Fallback
+    else {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Endpoint not found' }));
+    }
+  } catch (err) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Internal Server Error' }));
   }
 });
 
