@@ -71,7 +71,7 @@ app.post('/api/votes', async (req, res) => {
 
     // Check for existing duplicate records in database
     const existingVote = await Vote.findOne({
-      \$or: [
+    or: [
         { flatNo: flatNo.trim() },
         { mobileNo: mobileNo.trim() },
         { aadhaarNo: aadhaarNo.trim() }
