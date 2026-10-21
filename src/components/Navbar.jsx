@@ -18,6 +18,7 @@ export default function Navbar() {
 
         {/* Navigation Links */}
         <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-600">
+          <Link to="/" className="hover:text-blue-600 transition">Home</Link>
           <Link to="/about" className="hover:text-blue-600 transition">About Us</Link>
           <Link to="/panel" className="hover:text-blue-600 transition">Our Panel</Link>
           <Link to="/manifesto" className="hover:text-blue-600 transition">Manifesto</Link>
@@ -28,7 +29,6 @@ export default function Navbar() {
         {/* Action Buttons */}
         <div className="flex items-center space-x-3">
           
-          {/* Vote Now */}
           <Link
             to="/vote"
             className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-lg shadow-sm transition"
@@ -36,7 +36,6 @@ export default function Navbar() {
             🗳️ Vote Now
           </Link>
 
-          {/* View Results */}
           <Link
             to="/vote-results"
             className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg border border-slate-300 transition"
@@ -44,7 +43,6 @@ export default function Navbar() {
             📊 View Results
           </Link>
 
-          {/* Join WhatsApp */}
           <a
             href="https://chat.whatsapp.com/your-group-invite"
             target="_blank"
